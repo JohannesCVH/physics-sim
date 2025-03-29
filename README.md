@@ -1,1 +1,1 @@
-# physics-sim
+# 2D Physics simulation written in C#
