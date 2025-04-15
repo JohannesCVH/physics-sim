@@ -1,38 +1,88 @@
-using OpenTK.Mathematics;
-using PhysicsSim.Models3D;
+using SFML.Graphics;
+using SFML.System;
 
 using static PhysicsSim.Globals;
 
 namespace PhysicsSim;
 
-public class EntityCircle : EntityPhysical
+public class EntityCircle : Entity
 {
-    public EntityCircle(Vector2 pos, float radius) : 
-        base(pos, radius * 2)
+    public float Radius { get; set; }
+    public int TriCount { get; set; } = 32;
+    
+    public EntityCircle(Vector2f pos, float radius) :
+        base(pos)
     {
-        GenCircle(pos, 16, radius);
-        Mesh.CreateMesh();
+        Radius = radius;
     }
 
-    public void GenCircle(Vector2 pos, int triCount, float radius)
+    public override VertexArray Generate(Vector2i pos)
     {
+        var va = new VertexArray(PrimitiveType.TriangleFan);
+        
         //there are 2*pi radians in a full circle. so 2*pi = 6.2831855 (radians) = 360 degrees.
-        float angleIncr = (float)(2.0f * Math.PI / triCount); //in radians
+        float angleIncr = (float)(2.0f * Math.PI / TriCount); //in radians
         float currentAngle = 0.0f; //also in radians
 
-        Vertex[] vertices = new Vertex[(triCount * 3) + 1];
-
-        vertices[0] = new Vertex(new Vector3(pos.X, pos.Y, 0.0f));
-
-        for (int i = 0; i <= triCount; i++)
+        for (int i = 0; i < TriCount; i++)
         {
-            float x = WINDOW_ASPECT * pos.X + (float)(radius * MathHelper.Cos(currentAngle));
-            float y = pos.Y + (float)(radius * MathHelper.Sin(currentAngle));
+            float x = WINDOW_ASPECT * Position.X + (float)(Radius * MathF.Cos(currentAngle));
+            float y = -Position.Y + (float)(Radius * MathF.Sin(currentAngle));
 
-            vertices[i] = new Vertex(new Vector3(x, y, 0.0f));
+            va.Append(new Vertex(new Vector2f(x, y), Color.White));
             currentAngle += angleIncr;
         }
+        
+        return va;
+    }
 
-        Mesh.Vertices = vertices;
+    public override bool IsInside(Vector2f pos)
+    {
+        var dist = Math.Sqrt(Math.Pow(Position.X - pos.X, 2) + Math.Pow(Position.Y - pos.Y, 2));
+        // Console.WriteLine($"Distance: {dist}");
+        if (dist < Radius) return true;
+
+        return false;
+    }
+
+    public override void CheckCollisions()
+    {
+        //Check window collisions
+        if ((Position.X - Radius) < -WORLD_SIZE)
+        {
+            Position = new Vector2f(-WORLD_SIZE + Radius, Position.Y);
+            Velocity = new Vector2f(-Velocity.X, Velocity.Y);
+        }
+        if ((Position.X + Radius) > WORLD_SIZE)
+        {
+            Position = new Vector2f(WORLD_SIZE - Radius, Position.Y);
+            Velocity = new Vector2f(-Velocity.X, Velocity.Y);
+        }
+        if ((Position.Y - Radius) < -WORLD_SIZE)
+        {
+            Position = new Vector2f(Position.X, -WORLD_SIZE + Radius);
+            Velocity = new Vector2f(Velocity.X, -Velocity.Y);
+        }
+        if ((Position.Y + Radius) > WORLD_SIZE)
+        {
+            Position = new Vector2f(Position.X, WORLD_SIZE - Radius);
+            Velocity = new Vector2f(Velocity.X, -Velocity.Y);
+        }
+        
+        //Check other entity collisions
+        for (int i = 0; i < ENTITIES.Count; i++)
+        {
+            if (GetHashCode() == ENTITIES[i].GetHashCode()) continue;
+            if (ENTITIES[i].GetType() == typeof(EntityCircle))
+            {
+                var collision = this.CheckCollisionCircle((EntityCircle)ENTITIES[i], out float collisionDepth);
+                if (!collision) continue;
+                
+                Vector2f dir = (Position - ENTITIES[i].Position).Normalize();
+                // Console.WriteLine($"Direction: {dir}");
+                Position += dir * collisionDepth;
+                ENTITIES[i].Position += -dir * collisionDepth;
+            }
+        }
     }
 }
