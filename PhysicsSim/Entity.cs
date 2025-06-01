@@ -23,4 +23,9 @@ public abstract class Entity
 		Position += Velocity;
 		CheckCollisions();
 	}
+
+	public void Move(Vector2f pos)
+	{
+		Position += pos;
+	}
 }

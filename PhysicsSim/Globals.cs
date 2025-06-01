@@ -1,3 +1,5 @@
+using SFML.System;
+
 namespace PhysicsSim;
 
 internal static class Globals
@@ -14,4 +16,6 @@ internal static class Globals
     public static List<Entity> ENTITIES = new List<Entity>();
     public static Entity? ACTIVE_ENTITY = null;
     public static DateTime ACTIVE_ENTITY_LAST_SET = DateTime.Now;
+    
+    public static Vector2f GRAVITY = new Vector2f(0.0f, -9.8f);
 }
